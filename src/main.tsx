@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState, type ComponentType } from "react";
+import { StrictMode, useEffect, useRef, useState, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight,
@@ -7,9 +7,12 @@ import {
   GraduationCap,
   Mail,
   MapPin,
+  Pause,
+  Play,
   Trophy,
 } from "lucide-react";
 import { motion } from "motion/react";
+import WaveSurfer from "wavesurfer.js";
 import {
   Link,
   Outlet,
@@ -30,10 +33,21 @@ import {
   SiX,
 } from "react-icons/si";
 import { DitherBackground } from "./DitherBackground";
+import { musicPeaks } from "./musicPeaks";
 import "./style.css";
 
 type Icon = IconType | ComponentType<{ className?: string }>;
 type Tool = { name: string; icon?: Icon; logo?: string; color?: string };
+type MusicTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  cover: string;
+  preview: string;
+  query: string;
+  appleMusicUrl?: string;
+  spotifyUrl?: string;
+};
 
 const socials = [
   { label: "X", href: "https://x.com/evverin", icon: SiX, color: "#ffffff" },
@@ -57,6 +71,169 @@ const tools: Array<Tool> = [
   { name: "Coolify", logo: "/brand/coolify.svg" },
   { name: "Expo", icon: SiExpo, color: "#ffffff" },
   { name: "Codex", logo: "/brand/codex.svg" },
+];
+
+const musicTracks: Array<MusicTrack> = [
+  {
+    id: "camilla-yung-saint-paul",
+    title: "Camilla",
+    artist: "Yung Saint Paul",
+    cover: "/music/covers/camilla-yung-saint-paul.jpg",
+    preview: "/music/tracks/camilla-yung-saint-paul.mp3",
+    query: "Camilla Yung Saint Paul",
+    appleMusicUrl: "https://music.apple.com/us/song/camilla/1810040773",
+    spotifyUrl: "https://open.spotify.com/track/4IgsV4j9x88UgXTiYSzMK5",
+  },
+  {
+    id: "don-t-stop-dj-heartstring",
+    title: "Don't Stop",
+    artist: "DJ Heartstring, southstar",
+    cover: "/music/covers/don-t-stop-dj-heartstring.jpg",
+    preview: "/music/tracks/don-t-stop-dj-heartstring.mp3",
+    query: "Don't Stop DJ Heartstring southstar",
+    appleMusicUrl: "https://music.apple.com/at/album/dont-stop/1740492777?i=1740492783",
+    spotifyUrl: "https://open.spotify.com/track/3tYYypENWxaS1DKUtcH8S8",
+  },
+  {
+    id: "europatraume-brutalismus-3000",
+    title: "Europaträume",
+    artist: "Brutalismus 3000",
+    cover: "/music/covers/europatraume-brutalismus-3000.jpg",
+    preview: "/music/tracks/europatraume-brutalismus-3000.mp3",
+    query: "Europaträume Brutalismus 3000",
+    appleMusicUrl: "https://music.apple.com/us/song/europatr%C3%A4ume/1755210180",
+    spotifyUrl: "https://open.spotify.com/track/0PYX7X0wTBT5WvKzNCWtk2",
+  },
+  {
+    id: "everytime-idemi",
+    title: "Everytime",
+    artist: "IDEMI, Lustral",
+    cover: "/music/covers/everytime-idemi.jpg",
+    preview: "/music/tracks/everytime-idemi.mp3",
+    query: "Everytime IDEMI Lustral",
+    appleMusicUrl: "https://music.apple.com/at/album/everytime/1833936100?i=1833936101",
+    spotifyUrl: "https://open.spotify.com/track/5uaHSOou5ernQBKhfVse1f",
+  },
+  {
+    id: "genesis-grimes",
+    title: "Genesis",
+    artist: "Grimes",
+    cover: "/music/covers/genesis-grimes.jpg",
+    preview: "/music/tracks/genesis-grimes.mp3",
+    query: "Genesis Grimes",
+    appleMusicUrl: "https://music.apple.com/at/album/genesis/1544356705?i=1544356709",
+    spotifyUrl: "https://open.spotify.com/track/3cjvqsvvU80g7WJPMVh8iq",
+  },
+  {
+    id: "key-to-my-heart-bovski",
+    title: "Key To My Heart",
+    artist: "BOVSKI",
+    cover: "/music/covers/key-to-my-heart-bovski.jpg",
+    preview: "/music/tracks/key-to-my-heart-bovski.mp3",
+    query: "Key To My Heart BOVSKI",
+    appleMusicUrl: "https://music.apple.com/at/album/key-to-my-heart/1869879422?i=1869879423",
+    spotifyUrl: "https://open.spotify.com/track/2LEFdBlzEJQRKTjI47oHSS",
+  },
+  {
+    id: "pushe-packs-kev-koko",
+    title: "Pushe Packs",
+    artist: "Kev Koko, Bauernfeind, Pashanim",
+    cover: "/music/covers/pushe-packs-kev-koko.jpg",
+    preview: "/music/tracks/pushe-packs-kev-koko.mp3",
+    query: "Pushe Packs Kev Koko Bauernfeind Pashanim",
+    appleMusicUrl: "https://music.apple.com/us/song/pushe-packs-feat-pashanim/1754345848",
+    spotifyUrl: "https://open.spotify.com/track/54f2IdWSfeTb1LxmpvVb0K",
+  },
+  {
+    id: "samurai-schwert-yung-hurn",
+    title: "Samurai Schwert",
+    artist: "Yung Hurn",
+    cover: "/music/covers/samurai-schwert-yung-hurn.jpg",
+    preview: "/music/tracks/samurai-schwert-yung-hurn.mp3",
+    query: "Samurai Schwert Yung Hurn",
+    appleMusicUrl: "https://music.apple.com/at/album/samurai-schwert/1850509856?i=1850509859",
+    spotifyUrl: "https://open.spotify.com/track/4W8Nib7ekr4ydmfk0iaBUc",
+  },
+  {
+    id: "shabab-e-s-im-vip-pashanim",
+    title: "Shabab(e)s im VIP",
+    artist: "Pashanim, Ceren",
+    cover: "/music/covers/shabab-e-s-im-vip-pashanim.jpg",
+    preview: "/music/tracks/shabab-e-s-im-vip-pashanim.mp3",
+    query: "Shabab(e)s im VIP Pashanim Ceren",
+    appleMusicUrl: "https://music.apple.com/us/song/shabab-e-s-im-vip/1811097939",
+    spotifyUrl: "https://open.spotify.com/track/1JjHQ4lfAjbDq7wmOmH9wM",
+  },
+  {
+    id: "sulk-tr-st",
+    title: "Sulk",
+    artist: "TR/ST",
+    cover: "/music/covers/sulk-tr-st.jpg",
+    preview: "/music/tracks/sulk-tr-st.mp3",
+    query: "Sulk TR/ST",
+    appleMusicUrl: "https://music.apple.com/at/album/sulk/1442350386?i=1442350986",
+    spotifyUrl: "https://open.spotify.com/track/1CuNAntYhT2j6LNJoIEfF4",
+  },
+  {
+    id: "sundress-a-ap-rocky",
+    title: "Sundress",
+    artist: "A$AP Rocky",
+    cover: "/music/covers/sundress-a-ap-rocky.jpg",
+    preview: "/music/tracks/sundress-a-ap-rocky.mp3",
+    query: "Sundress A$AP Rocky",
+    appleMusicUrl: "https://music.apple.com/at/album/sundress/1442956429?i=1442956431",
+    spotifyUrl: "https://open.spotify.com/track/2aPTvyE09vUCRwVvj0I8WK",
+  },
+  {
+    id: "ten-fred-again",
+    title: "ten",
+    artist: "Fred again.., Jozzy",
+    cover: "/music/covers/ten-fred-again.jpg",
+    preview: "/music/tracks/ten-fred-again.mp3",
+    query: "ten Fred again.. Jozzy",
+    appleMusicUrl: "https://music.apple.com/at/album/ten/1706861926?i=1706861929",
+    spotifyUrl: "https://open.spotify.com/track/5QOBT97OmYCZo1W5u7tRrB",
+  },
+  {
+    id: "ufo361-match-3",
+    title: "Match 3",
+    artist: "Ufo361, lucidbeatz",
+    cover: "/music/covers/ufo361-match-3.jpg",
+    preview: "/music/tracks/ufo361-match-3.mp3",
+    query: "Match 3 Ufo361 lucidbeatz",
+    appleMusicUrl: "https://music.apple.com/at/album/match-3/1689023482?i=1689023491",
+    spotifyUrl: "https://open.spotify.com/track/4iaDcHWWvPI63bMYpAIHhu",
+  },
+  {
+    id: "vhs-01099",
+    title: "VHS",
+    artist: "01099, Gustav, Zachi",
+    cover: "/music/covers/vhs-01099.jpg",
+    preview: "/music/tracks/vhs-01099.mp3",
+    query: "VHS 01099 Gustav Zachi",
+    appleMusicUrl: "https://music.apple.com/ca/song/vhs/1680053088",
+    spotifyUrl: "https://open.spotify.com/track/2PE71wHgZG5Z6CLOxPDPe7",
+  },
+  {
+    id: "vanished-crystal-castles",
+    title: "Vanished",
+    artist: "Crystal Castles",
+    cover: "/music/covers/vanished-crystal-castles.jpg",
+    preview: "/music/tracks/vanished-crystal-castles.mp3",
+    query: "Vanished Crystal Castles",
+    appleMusicUrl: "https://music.apple.com/us/song/vanished/1132754196",
+    spotifyUrl: "https://open.spotify.com/track/4bQ7mjty0UVlKRalhizpGT",
+  },
+  {
+    id: "get-buck-lugatti",
+    title: "get buck",
+    artist: "Lugatti, Traya, Lugatti & 9ine",
+    cover: "/music/covers/get-buck-lugatti.jpg",
+    preview: "/music/tracks/get-buck-lugatti.mp3",
+    query: "get buck Lugatti Traya Lugatti & 9ine",
+    appleMusicUrl: "https://music.apple.com/us/song/get-buck/1786937788",
+    spotifyUrl: "https://open.spotify.com/track/39BYf3aOgW7C9in214a9YF",
+  },
 ];
 
 const timeline = [
@@ -138,6 +315,236 @@ function ShellLine({ command }: { command: string }) {
       <span className="muted">$</span>
       <span>{command}</span>
     </div>
+  );
+}
+
+function formatTime(seconds: number) {
+  if (!Number.isFinite(seconds)) {
+    return "0:00";
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${minutes}:${remainingSeconds}`;
+}
+
+function musicUrl(service: "apple" | "spotify", query: string) {
+  const encodedQuery = encodeURIComponent(query);
+  return service === "apple"
+    ? `https://music.apple.com/search?term=${encodedQuery}`
+    : `https://open.spotify.com/search/${encodedQuery}`;
+}
+
+function MusicTrackRow({
+  track,
+  index,
+  activeTrackId,
+  setActiveTrackId,
+}: {
+  track: MusicTrack;
+  index: number;
+  activeTrackId: string | null;
+  setActiveTrackId: (id: string | null) => void;
+}) {
+  const waveformRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<WaveSurfer | null>(null);
+  const sourceLoadRef = useRef<Promise<void> | null>(null);
+  const hasLoadedSourceRef = useRef(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const peakData = musicPeaks[track.id];
+  const [duration, setDuration] = useState(peakData?.duration ?? 0);
+  const isActive = activeTrackId === track.id;
+
+  useEffect(() => {
+    if (!waveformRef.current) {
+      return undefined;
+    }
+
+    const media = new Audio();
+    media.preload = "none";
+
+    const player = WaveSurfer.create({
+      container: waveformRef.current,
+      duration: peakData?.duration,
+      height: 42,
+      barWidth: 2,
+      barGap: 2,
+      barRadius: 2,
+      barMinHeight: 2,
+      cursorColor: "#d9f99d",
+      cursorWidth: 1,
+      dragToSeek: true,
+      hideScrollbar: true,
+      interact: true,
+      media,
+      normalize: true,
+      peaks: peakData?.peaks,
+      progressColor: "#d9f99d",
+      sampleRate: 8000,
+      waveColor: "#3f3f46",
+    });
+
+    playerRef.current = player;
+
+    const handlePlayError = (error: unknown) => {
+      console.error(`Could not play preview for ${track.title}`, error);
+      setIsPlaying(false);
+      setActiveTrackId(null);
+    };
+
+    player.on("ready", (loadedDuration) => {
+      setDuration(loadedDuration);
+      setIsReady(true);
+    });
+    player.on("play", () => {
+      setIsPlaying(true);
+      setActiveTrackId(track.id);
+    });
+    player.on("pause", () => setIsPlaying(false));
+    player.on("finish", () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      player.setTime(0);
+      setActiveTrackId(null);
+    });
+    player.on("timeupdate", (time) => setCurrentTime(time));
+    player.on("interaction", () => {
+      setActiveTrackId(track.id);
+      if (!player.isPlaying()) {
+        void playTrack().catch(handlePlayError);
+      }
+    });
+    player.on("error", (error) => {
+      console.error(`Could not load preview for ${track.title}`, error);
+      setIsReady(false);
+    });
+
+    return () => {
+      player.destroy();
+      playerRef.current = null;
+      sourceLoadRef.current = null;
+      hasLoadedSourceRef.current = false;
+    };
+  }, [peakData?.duration, peakData?.peaks, setActiveTrackId, track.id, track.preview, track.title]);
+
+  useEffect(() => {
+    if (!isActive && playerRef.current?.isPlaying()) {
+      playerRef.current.pause();
+    }
+  }, [isActive]);
+
+  const ensureSource = async () => {
+    const player = playerRef.current;
+    if (!player) {
+      throw new Error("Track player is not ready yet");
+    }
+
+    if (hasLoadedSourceRef.current) {
+      return;
+    }
+
+    if (!sourceLoadRef.current) {
+      sourceLoadRef.current = player
+        .load(track.preview, peakData?.peaks, peakData?.duration)
+        .then(() => {
+          hasLoadedSourceRef.current = true;
+        })
+        .finally(() => {
+          sourceLoadRef.current = null;
+        });
+    }
+
+    await sourceLoadRef.current;
+  };
+
+  const playTrack = async () => {
+    await ensureSource();
+    await playerRef.current?.play();
+  };
+
+  const togglePlayback = () => {
+    const player = playerRef.current;
+    if (!player || !isReady) {
+      return;
+    }
+
+    if (player.isPlaying()) {
+      player.pause();
+      setActiveTrackId(null);
+    } else {
+      setActiveTrackId(track.id);
+      void playTrack().catch((error) => {
+        console.error(`Could not play preview for ${track.title}`, error);
+        setIsPlaying(false);
+        setActiveTrackId(null);
+      });
+    }
+  };
+
+  return (
+    <motion.article
+      className={`music-track${isActive ? " is-active" : ""}`}
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.35, delay: index * 0.025 }}
+    >
+      <div className="music-cover-wrap">
+        <img src={track.cover} alt={`${track.title} cover`} className="music-cover" />
+        <button
+          type="button"
+          className="music-play"
+          onClick={togglePlayback}
+          disabled={!isReady}
+          aria-label={isPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
+        >
+          {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+        </button>
+      </div>
+      <div className="music-main">
+        <div className="music-heading">
+          <div>
+            <h3>{track.title}</h3>
+            <p>{track.artist}</p>
+          </div>
+          <span className="music-index">{String(index + 1).padStart(2, "0")}</span>
+        </div>
+        <div
+          className="music-waveform"
+          ref={waveformRef}
+          aria-label={`${track.title} preview waveform`}
+        />
+        <div className="music-footer">
+          <span className="music-time">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
+          <div className="music-services">
+            <a
+              href={track.appleMusicUrl ?? musicUrl("apple", track.query)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Listen to ${track.title} on Apple Music`}
+              className="music-service apple"
+            >
+              <img src="/brand/apple-music-icon.png" alt="Apple Music" />
+            </a>
+            <a
+              href={track.spotifyUrl ?? musicUrl("spotify", track.query)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Listen to ${track.title} on Spotify`}
+              className="music-service spotify"
+            >
+              <img src="/brand/spotify-icon.png" alt="Spotify" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </motion.article>
   );
 }
 
@@ -283,6 +690,37 @@ function StackSection() {
   );
 }
 
+function MusicSection() {
+  const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
+
+  return (
+    <section id="music" className="section music-section">
+      <div className="page section-stack">
+        <div>
+          <ShellLine command="cat music/currently.looping" />
+          <h2 className="music-title">
+            <span>Music I like</span>
+          </h2>
+          <p className="section-note">
+            Current rotation from the local playlist.
+          </p>
+        </div>
+        <div className="music-grid">
+          {musicTracks.map((track, index) => (
+            <MusicTrackRow
+              key={track.id}
+              track={track}
+              index={index}
+              activeTrackId={activeTrackId}
+              setActiveTrackId={setActiveTrackId}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function TimelineSection() {
   return (
     <section id="timeline" className="section">
@@ -389,6 +827,7 @@ function Home() {
       <IntroSection />
       <StayveraSection />
       <StackSection />
+      <MusicSection />
       <TimelineSection />
       <FeaturedProject />
       <ContactSection />
