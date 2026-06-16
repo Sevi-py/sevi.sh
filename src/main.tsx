@@ -55,7 +55,7 @@ const SITE_URL = "https://sevi.sh";
 const SITE_NAME = "sevi.sh";
 const DEFAULT_TITLE = "Severin Hilbert - sevi.sh";
 const DEFAULT_DESCRIPTION =
-  "Severin Hilbert is a developer in Vienna building privacy-minded tools, AI-native products, and calm software.";
+  "Severin Hilbert is a developer in Vienna building AI-native products, privacy-minded tools, and calm software.";
 const SOCIAL_IMAGE_URL = `${SITE_URL}/og-image.png`;
 
 type Icon = IconType | ComponentType<{ className?: string }>;
@@ -735,7 +735,7 @@ function DecryptedText({
 function TypedIntroDescription({ age, delay = 0 }: { age: string; delay?: number }) {
   const prefix = "Developer in Vienna, Austria. Currently ";
   const suffix =
-    " years old. I build privacy-minded tools, AI-native products, and calm software.";
+    " years old. I build AI-native products, privacy-minded tools, and calm software.";
   const shouldReduceMotion = useReducedMotion();
   const [ref, hasStarted] = useStartOnView<HTMLParagraphElement>();
   const [visibleCharacters, setVisibleCharacters] = useState(0);
