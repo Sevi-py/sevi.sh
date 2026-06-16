@@ -51,6 +51,13 @@ import { DitherBackground } from "./DitherBackground";
 import { musicPeaks } from "./musicPeaks";
 import "./style.css";
 
+const SITE_URL = "https://sevi.sh";
+const SITE_NAME = "sevi.sh";
+const DEFAULT_TITLE = "Severin Hilbert - sevi.sh";
+const DEFAULT_DESCRIPTION =
+  "Severin Hilbert is a developer in Vienna building AI-native products, privacy-minded tools, and calm software.";
+const SOCIAL_IMAGE_URL = `${SITE_URL}/og-image.png`;
+
 type Icon = IconType | ComponentType<{ className?: string }>;
 type Tool = { name: string; icon?: Icon; logo?: string; color?: string };
 type MusicTrack = {
@@ -324,6 +331,70 @@ const timeline = [
   },
 ];
 
+function absoluteUrl(path: string) {
+  return new URL(path, SITE_URL).toString();
+}
+
+function upsertMeta(selector: string, attributes: Record<string, string>) {
+  const existingElement = document.head.querySelector<HTMLMetaElement>(selector);
+  const element = existingElement ?? document.createElement("meta");
+
+  Object.entries(attributes).forEach(([name, value]) => {
+    element.setAttribute(name, value);
+  });
+
+  if (!existingElement) {
+    document.head.appendChild(element);
+  }
+}
+
+function upsertLink(selector: string, attributes: Record<string, string>) {
+  const existingElement = document.head.querySelector<HTMLLinkElement>(selector);
+  const element = existingElement ?? document.createElement("link");
+
+  Object.entries(attributes).forEach(([name, value]) => {
+    element.setAttribute(name, value);
+  });
+
+  if (!existingElement) {
+    document.head.appendChild(element);
+  }
+}
+
+function PageMeta({
+  title,
+  description,
+  path,
+}: {
+  title: string;
+  description: string;
+  path: string;
+}) {
+  useEffect(() => {
+    const canonicalUrl = absoluteUrl(path);
+
+    document.title = title;
+    upsertLink('link[rel="canonical"]', { rel: "canonical", href: canonicalUrl });
+    upsertMeta('meta[name="description"]', { name: "description", content: description });
+    upsertMeta('meta[property="og:title"]', { property: "og:title", content: title });
+    upsertMeta('meta[property="og:description"]', {
+      property: "og:description",
+      content: description,
+    });
+    upsertMeta('meta[property="og:url"]', { property: "og:url", content: canonicalUrl });
+    upsertMeta('meta[property="og:site_name"]', { property: "og:site_name", content: SITE_NAME });
+    upsertMeta('meta[property="og:image"]', { property: "og:image", content: SOCIAL_IMAGE_URL });
+    upsertMeta('meta[name="twitter:title"]', { name: "twitter:title", content: title });
+    upsertMeta('meta[name="twitter:description"]', {
+      name: "twitter:description",
+      content: description,
+    });
+    upsertMeta('meta[name="twitter:image"]', { name: "twitter:image", content: SOCIAL_IMAGE_URL });
+  }, [description, path, title]);
+
+  return null;
+}
+
 function Root() {
   return (
     <div className="min-h-screen bg-black text-white">
@@ -483,9 +554,11 @@ function TypingText({
       className: `typing-text${visibleCharacters < text.length ? " is-typing" : ""}${
         className ? ` ${className}` : ""
       }`,
-      "aria-label": text,
     },
-    text.slice(0, visibleCharacters),
+    <>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">{text.slice(0, visibleCharacters)}</span>
+    </>,
   );
 }
 
@@ -651,16 +724,18 @@ function DecryptedText({
       className: `decrypted-text${visibleCharacters < text.length ? " is-decrypting" : ""}${
         className ? ` ${className}` : ""
       }`,
-      "aria-label": text,
     },
-    scrambledText,
+    <>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">{scrambledText}</span>
+    </>,
   );
 }
 
 function TypedIntroDescription({ age, delay = 0 }: { age: string; delay?: number }) {
   const prefix = "Developer in Vienna, Austria. Currently ";
   const suffix =
-    " years old. I build privacy-minded tools, AI-native products, and calm software.";
+    " years old. I build AI-native products, privacy-minded tools, and calm software.";
   const shouldReduceMotion = useReducedMotion();
   const [ref, hasStarted] = useStartOnView<HTMLParagraphElement>();
   const [visibleCharacters, setVisibleCharacters] = useState(0);
@@ -705,11 +780,13 @@ function TypedIntroDescription({ age, delay = 0 }: { age: string; delay?: number
     <p
       ref={ref}
       className={`intro typing-text${visibleCharacters < totalCharacters ? " is-typing" : ""}`}
-      aria-label={`${prefix}${age}${suffix}`}
     >
-      {visiblePrefix}
-      {showAge ? <span className="age">{age}</span> : null}
-      {visibleSuffix}
+      <span className="sr-only">{`${prefix}${age}${suffix}`}</span>
+      <span aria-hidden="true">
+        {visiblePrefix}
+        {showAge ? <span className="age">{age}</span> : null}
+        {visibleSuffix}
+      </span>
     </p>
   );
 }
@@ -896,15 +973,19 @@ function MusicTrackRow({
   };
 
   return (
-    <ScrollResponsiveArticle
-      className={`music-track${isActive ? " is-active" : ""}`}
-    >
+    <ScrollResponsiveArticle className={`music-track${isActive ? " is-active" : ""}`}>
       <div className="music-row-command">
         <span className="music-index">{String(index + 1).padStart(2, "0")}</span>
         <span className="terminal-arrow">&gt;</span>
       </div>
       <div className="music-cover-wrap">
-        <img src={track.cover} alt={`${track.title} cover`} className="music-cover" />
+        <img
+          src={track.cover}
+          alt={`${track.title} cover`}
+          className="music-cover"
+          loading="lazy"
+          decoding="async"
+        />
         <button
           type="button"
           className="music-play"
@@ -938,20 +1019,30 @@ function MusicTrackRow({
             <a
               href={track.appleMusicUrl ?? musicUrl("apple", track.query)}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               aria-label={`Listen to ${track.title} on Apple Music`}
               className="music-service apple"
             >
-              <img src="/brand/apple-music-icon.png" alt="Apple Music" />
+              <img
+                src="/brand/apple-music-icon.png"
+                alt="Apple Music"
+                loading="lazy"
+                decoding="async"
+              />
             </a>
             <a
               href={track.spotifyUrl ?? musicUrl("spotify", track.query)}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               aria-label={`Listen to ${track.title} on Spotify`}
               className="music-service spotify"
             >
-              <img src="/brand/spotify-icon.png" alt="Spotify" />
+              <img
+                src="/brand/spotify-icon.png"
+                alt="Spotify"
+                loading="lazy"
+                decoding="async"
+              />
             </a>
           </div>
         </div>
@@ -996,7 +1087,7 @@ function IntroSection() {
                     href={social.href}
                     aria-label={social.label}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                   >
                     <IconComponent className="size-5" style={{ color: social.color }} />
                   </a>
@@ -1026,11 +1117,16 @@ function FeaturedProject() {
         <div>
           <ShellLine command="open featured-project" />
           <div className="project-title-row">
-            <a href="https://tnyr.me" target="_blank" rel="noreferrer" aria-label="Visit tnyr.me">
-              <img src="/brand/tnyr.webp" alt="tnyr.me logo" />
+            <a
+              href="https://tnyr.me"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visit tnyr.me"
+            >
+              <img src="/brand/tnyr.webp" alt="tnyr.me logo" loading="lazy" decoding="async" />
             </a>
             <h2>
-              <a href="https://tnyr.me" target="_blank" rel="noreferrer">
+              <a href="https://tnyr.me" target="_blank" rel="noopener noreferrer">
                 <DecryptedText text="tnyr.me" delay={180} interval={82} />
               </a>
             </h2>
@@ -1067,10 +1163,14 @@ function FeaturedProject() {
             </span>
           </div>
           <div className="link-row">
-            <a href="https://tnyr.me" target="_blank" rel="noreferrer">
+            <a href="https://tnyr.me" target="_blank" rel="noopener noreferrer">
               visit <ArrowUpRight className="size-4" />
             </a>
-            <a href="https://github.com/Sevi-py/tnyr.me" target="_blank" rel="noreferrer">
+            <a
+              href="https://github.com/Sevi-py/tnyr.me"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               source <SiGithub className="size-4" />
             </a>
           </div>
@@ -1099,7 +1199,7 @@ function StackSection() {
                 className="tool-item"
               >
                 {tool.logo ? (
-                  <img src={tool.logo} alt={`${tool.name} logo`} />
+                  <img src={tool.logo} alt={`${tool.name} logo`} loading="lazy" decoding="async" />
                 ) : IconComponent ? (
                   <IconComponent className="size-6" style={{ color: tool.color }} />
                 ) : null}
@@ -1202,7 +1302,12 @@ function TimelineSection() {
                           {item.date}
                         </span>
                         <span className="timeline-logo">
-                          <img src={item.logo} alt={`${item.org} logo`} />
+                          <img
+                            src={item.logo}
+                            alt={`${item.org} logo`}
+                            loading="lazy"
+                            decoding="async"
+                          />
                         </span>
                       </div>
                       <TypingText as="h3" text={item.role} adaptive speed={24} start={isVisible} />
@@ -1240,7 +1345,7 @@ function StayveraSection() {
             <motion.a
               href="https://stayvera.com"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               aria-label="Visit Stayvera"
               className="stayvera-brand"
               initial={{ opacity: 0, y: 6 }}
@@ -1248,7 +1353,7 @@ function StayveraSection() {
               viewport={{ once: true }}
               transition={{ duration: 0.2, delay: 0.5 }}
             >
-              <img src="/brand/stayvera-symbol.webp" alt="" />
+              <img src="/brand/stayvera-symbol.webp" alt="" loading="lazy" decoding="async" />
               <span>Stayvera</span>
             </motion.a>
           </h2>
@@ -1308,7 +1413,7 @@ function ContactSection() {
             <a href="mailto:severin.hilbert@gmail.com">
               send mail <Mail className="size-4" />
             </a>
-            <a href="https://github.com/Sevi-py" target="_blank" rel="noreferrer">
+            <a href="https://github.com/Sevi-py" target="_blank" rel="noopener noreferrer">
               GitHub <ArrowUpRight className="size-4" />
             </a>
           </div>
@@ -1321,6 +1426,7 @@ function ContactSection() {
 function Home() {
   return (
     <main>
+      <PageMeta title={DEFAULT_TITLE} description={DEFAULT_DESCRIPTION} path="/" />
       <IntroSection />
       <StayveraSection />
       <StackSection />
@@ -1336,6 +1442,11 @@ function Home() {
 function Imprint() {
   return (
     <main className="imprint-page">
+      <PageMeta
+        title="Imprint - Severin Hilbert"
+        description="Site operator and contact information for Severin Hilbert."
+        path="/imprint"
+      />
       <section className="page">
         <ShellLine command="cat imprint.txt" />
         <h1>Imprint</h1>
@@ -1364,6 +1475,11 @@ function Imprint() {
 function Privacy() {
   return (
     <main className="imprint-page">
+      <PageMeta
+        title="Privacy - Severin Hilbert"
+        description="Privacy information for sevi.sh, including hosting, analytics, cookies, contact, and data rights."
+        path="/privacy"
+      />
       <section className="page">
         <ShellLine command="cat privacy.txt" />
         <h1>Privacy</h1>

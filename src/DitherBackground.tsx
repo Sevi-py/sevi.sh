@@ -178,8 +178,8 @@ function DitherPlane() {
     resolution: new THREE.Uniform(new THREE.Vector2(0, 0)),
     waveSpeed: new THREE.Uniform(0.024),
     waveFrequency: new THREE.Uniform(2.35),
-    waveAmplitude: new THREE.Uniform(0.22),
-    waveColor: new THREE.Uniform(new THREE.Color(0.42, 0.54, 0.38)),
+    waveAmplitude: new THREE.Uniform(0.24),
+    waveColor: new THREE.Uniform(new THREE.Color(0.54, 0.7, 0.44)),
     mousePos: new THREE.Uniform(new THREE.Vector2(0, 0)),
     enableMouseInteraction: new THREE.Uniform(1),
     mouseRadius: new THREE.Uniform(1.05),
@@ -218,7 +218,7 @@ function DitherPlane() {
         />
       </mesh>
       <EffectComposer>
-        <DitherEffect colorNum={3} pixelSize={3} />
+        <DitherEffect colorNum={4} pixelSize={3} />
       </EffectComposer>
     </>
   );
