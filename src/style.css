@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "@fontsource-variable/jetbrains-mono";
+@import "./styles/base.css";
+@import "./styles/text-effects.css";
+@import "./styles/sections.css";
+@import "./styles/music.css";
+@import "./styles/timeline.css";
+@import "./styles/legal.css";
+@import "./styles/responsive.css";
+

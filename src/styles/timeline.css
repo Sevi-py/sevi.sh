@@ -1,0 +1,60 @@
+.timeline {
+  display: grid;
+}
+
+.timeline-item {
+  position: relative;
+  padding-block: 0.72rem;
+}
+
+.timeline-meta {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  color: #a1a1aa;
+  font-size: 0.7rem;
+}
+
+.timeline-date {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.timeline-logo {
+  position: absolute;
+  top: 1.75rem;
+  right: 0;
+  display: inline-flex;
+  flex: 0 0 4.2rem;
+  width: 4.2rem;
+  height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.timeline-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  opacity: 1;
+}
+
+.timeline-item .org {
+  margin-top: 0.2rem;
+  color: #d9f99d;
+  font-size: 0.76rem;
+}
+
+.timeline-item h3 {
+  padding-right: 5rem;
+}
+
+.timeline-item p:not(.org) {
+  margin-top: 0.55rem;
+  color: #c7c7cc;
+  line-height: 1.58;
+  font-size: 0.82rem;
+}
+

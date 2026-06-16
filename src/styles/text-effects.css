@@ -1,0 +1,63 @@
+.shell-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  color: #f4f4f5;
+  font-size: clamp(0.68rem, 1.2vw, 0.78rem);
+}
+
+.shell-line span:first-child {
+  color: #d9f99d;
+}
+
+.shell-line .muted {
+  color: #71717a;
+}
+
+.shell-line::after {
+  width: 0.48rem;
+  height: 0.9rem;
+  content: "";
+  background: #d9f99d;
+  animation: blink 1s steps(2, jump-none) infinite;
+}
+
+.typing-text {
+  white-space: pre-line;
+}
+
+.typing-text.is-typing::after {
+  display: inline-block;
+  width: 0.48em;
+  height: 0.88em;
+  margin-left: 0.12em;
+  vertical-align: -0.08em;
+  content: "";
+  background: #d9f99d;
+  animation: blink 1s steps(2, jump-none) infinite;
+}
+
+.shell-line .typing-text.is-typing::after {
+  display: none;
+}
+
+.terminal-output {
+  min-width: 0;
+}
+
+.decrypted-text {
+  white-space: inherit;
+}
+
+.decrypted-text.is-decrypting {
+  color: #e4e4e7;
+  text-shadow: 0 0 10px rgba(217, 249, 157, 0.12);
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
