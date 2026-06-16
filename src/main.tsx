@@ -1,4 +1,13 @@
-import { StrictMode, useEffect, useRef, useState, type ComponentType } from "react";
+import {
+  StrictMode,
+  createElement,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ElementType,
+  type ReactNode,
+} from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUpRight,
@@ -11,7 +20,7 @@ import {
   Play,
   Trophy,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import WaveSurfer from "wavesurfer.js";
 import {
   Link,
@@ -275,7 +284,7 @@ const timeline = [
     date: "2018 - 2026",
     role: "High school",
     org: "BG/BRG Keimgasse Mödling",
-    text: "Completed the Austrian Matura with an average grade of 1.4",
+    text: "Completed the Austrian Matura with an average grade of 1.4 (1 is the best in Austria)",
   },
 ];
 
@@ -307,13 +316,287 @@ function useLiveAge() {
   return age;
 }
 
-function ShellLine({ command }: { command: string }) {
+function useStartOnView<T extends HTMLElement>(rootMargin = "0px 0px 18% 0px") {
+  const ref = useRef<T | null>(null);
+  const [hasStarted, setHasStarted] = useState(false);
+
+  useEffect(() => {
+    if (hasStarted) {
+      return undefined;
+    }
+
+    const node = ref.current;
+    if (!node) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasStarted(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin, threshold: 0.12 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasStarted, rootMargin]);
+
+  return [ref, hasStarted] as const;
+}
+
+function TypingText({
+  text,
+  as: Component = "span",
+  className,
+  delay = 0,
+  speed = 22,
+  start,
+}: {
+  text: string;
+  as?: ElementType;
+  className?: string;
+  delay?: number;
+  speed?: number;
+  start?: boolean;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const [ownRef, ownStart] = useStartOnView<HTMLElement>();
+  const isStarted = start ?? ownStart;
+  const [visibleCharacters, setVisibleCharacters] = useState(0);
+
+  useEffect(() => {
+    if (!isStarted) {
+      return undefined;
+    }
+
+    if (shouldReduceMotion) {
+      setVisibleCharacters(text.length);
+      return undefined;
+    }
+
+    setVisibleCharacters(0);
+    let typeTimer: number | undefined;
+    const startTimer = window.setTimeout(() => {
+      let nextCharacter = 0;
+      typeTimer = window.setInterval(() => {
+        nextCharacter += 1;
+        setVisibleCharacters(nextCharacter);
+
+        if (nextCharacter >= text.length) {
+          window.clearInterval(typeTimer);
+        }
+      }, speed);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(startTimer);
+      if (typeTimer) {
+        window.clearInterval(typeTimer);
+      }
+    };
+  }, [delay, isStarted, shouldReduceMotion, speed, text]);
+
+  return createElement(
+    Component,
+    {
+      ref: ownRef,
+      className: `typing-text${visibleCharacters < text.length ? " is-typing" : ""}${
+        className ? ` ${className}` : ""
+      }`,
+      "aria-label": text,
+    },
+    text.slice(0, visibleCharacters),
+  );
+}
+
+function TerminalOutput({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const [ref, hasStarted] = useStartOnView<HTMLDivElement>();
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <div className="shell-line">
+    <motion.div
+      ref={ref}
+      className={`terminal-output${className ? ` ${className}` : ""}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={hasStarted ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+      transition={{ duration: 0.26, delay: shouldReduceMotion ? 0 : delay, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+const decryptCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#%&*+-<>";
+
+function randomDecryptCharacter() {
+  return decryptCharacters[Math.floor(Math.random() * decryptCharacters.length)] ?? "#";
+}
+
+function DecryptedText({
+  text,
+  as: Component = "span",
+  className,
+  delay = 0,
+  revealStep = 1,
+  interval = 28,
+}: {
+  text: string;
+  as?: ElementType;
+  className?: string;
+  delay?: number;
+  revealStep?: number;
+  interval?: number;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const [ref, hasStarted] = useStartOnView<HTMLElement>();
+  const [visibleCharacters, setVisibleCharacters] = useState(0);
+  const [scrambledText, setScrambledText] = useState(text);
+
+  useEffect(() => {
+    if (!hasStarted) {
+      return undefined;
+    }
+
+    if (shouldReduceMotion) {
+      setVisibleCharacters(text.length);
+      setScrambledText(text);
+      return undefined;
+    }
+
+    setVisibleCharacters(0);
+    setScrambledText(
+      text
+        .split("")
+        .map((character) => (character.trim() ? randomDecryptCharacter() : character))
+        .join(""),
+    );
+
+    let revealTimer: number | undefined;
+    const startTimer = window.setTimeout(() => {
+      revealTimer = window.setInterval(() => {
+        setVisibleCharacters((current) => {
+          const next = Math.min(text.length, current + revealStep);
+
+          setScrambledText(
+            text
+              .split("")
+              .map((character, index) => {
+                if (index < next || !character.trim()) {
+                  return character;
+                }
+
+                return randomDecryptCharacter();
+              })
+              .join(""),
+          );
+
+          if (next >= text.length && revealTimer) {
+            window.clearInterval(revealTimer);
+          }
+
+          return next;
+        });
+      }, interval);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(startTimer);
+      if (revealTimer) {
+        window.clearInterval(revealTimer);
+      }
+    };
+  }, [delay, hasStarted, interval, revealStep, shouldReduceMotion, text]);
+
+  return createElement(
+    Component,
+    {
+      ref,
+      className: `decrypted-text${visibleCharacters < text.length ? " is-decrypting" : ""}${
+        className ? ` ${className}` : ""
+      }`,
+      "aria-label": text,
+    },
+    scrambledText,
+  );
+}
+
+function TypedIntroDescription({ age, delay = 0 }: { age: string; delay?: number }) {
+  const prefix = "Developer in Vienna, Austria. Currently ";
+  const suffix =
+    " years old. I build privacy-minded tools, AI-native products, and calm software.";
+  const shouldReduceMotion = useReducedMotion();
+  const [ref, hasStarted] = useStartOnView<HTMLParagraphElement>();
+  const [visibleCharacters, setVisibleCharacters] = useState(0);
+  const totalCharacters = prefix.length + suffix.length;
+  const visiblePrefix = prefix.slice(0, Math.min(visibleCharacters, prefix.length));
+  const visibleSuffix = suffix.slice(0, Math.max(0, visibleCharacters - prefix.length));
+  const showAge = visibleCharacters > prefix.length || shouldReduceMotion;
+
+  useEffect(() => {
+    if (!hasStarted) {
+      return undefined;
+    }
+
+    if (shouldReduceMotion) {
+      setVisibleCharacters(totalCharacters);
+      return undefined;
+    }
+
+    setVisibleCharacters(0);
+    let typeTimer: number | undefined;
+    const startTimer = window.setTimeout(() => {
+      let nextCharacter = 0;
+      typeTimer = window.setInterval(() => {
+        nextCharacter += 1;
+        setVisibleCharacters(nextCharacter);
+
+        if (nextCharacter >= totalCharacters) {
+          window.clearInterval(typeTimer);
+        }
+      }, 8);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(startTimer);
+      if (typeTimer) {
+        window.clearInterval(typeTimer);
+      }
+    };
+  }, [delay, hasStarted, shouldReduceMotion, totalCharacters]);
+
+  return (
+    <p
+      ref={ref}
+      className={`intro typing-text${visibleCharacters < totalCharacters ? " is-typing" : ""}`}
+      aria-label={`${prefix}${age}${suffix}`}
+    >
+      {visiblePrefix}
+      {showAge ? <span className="age">{age}</span> : null}
+      {visibleSuffix}
+    </p>
+  );
+}
+
+function ShellLine({ command, delay = 0 }: { command: string; delay?: number }) {
+  const [ref, hasStarted] = useStartOnView<HTMLDivElement>();
+
+  return (
+    <div className="shell-line" ref={ref}>
       <span>sevi@sevi.sh</span>
       <span className="muted">~</span>
       <span className="muted">$</span>
-      <span>{command}</span>
+      <TypingText text={command} start={hasStarted} delay={delay} speed={28} />
     </div>
   );
 }
@@ -389,6 +672,7 @@ function MusicTrackRow({
     });
 
     playerRef.current = player;
+    setIsReady(true);
 
     const handlePlayError = (error: unknown) => {
       console.error(`Could not play preview for ${track.title}`, error);
@@ -488,11 +772,15 @@ function MusicTrackRow({
   return (
     <motion.article
       className={`music-track${isActive ? " is-active" : ""}`}
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.35, delay: index * 0.025 }}
+      viewport={{ once: true, margin: "0px 0px 18% 0px" }}
+      transition={{ duration: 0.22, delay: 0.52 + Math.min(index, 5) * 0.018 }}
     >
+      <div className="music-row-command">
+        <span className="music-index">{String(index + 1).padStart(2, "0")}</span>
+        <span className="terminal-arrow">&gt;</span>
+      </div>
       <div className="music-cover-wrap">
         <img src={track.cover} alt={`${track.title} cover`} className="music-cover" />
         <button
@@ -508,10 +796,12 @@ function MusicTrackRow({
       <div className="music-main">
         <div className="music-heading">
           <div>
-            <h3>{track.title}</h3>
-            <p>{track.artist}</p>
+            <h3>
+              <span className="music-command-name">play</span> {track.title}
+            </h3>
+            <p>--artist="{track.artist}"</p>
           </div>
-          <span className="music-index">{String(index + 1).padStart(2, "0")}</span>
+          <span className="music-status">{isPlaying ? "streaming" : "ready"}</span>
         </div>
         <div
           className="music-waveform"
@@ -520,7 +810,7 @@ function MusicTrackRow({
         />
         <div className="music-footer">
           <span className="music-time">
-            {formatTime(currentTime)} / {formatTime(duration)}
+            time {formatTime(currentTime)} / {formatTime(duration)}
           </span>
           <div className="music-services">
             <a
@@ -560,41 +850,38 @@ function IntroSection() {
           transition={{ duration: 0.55, ease: "easeOut" }}
         >
           <ShellLine command="whoami" />
-          <h1>
-            Severin
-            <span>Hilbert</span>
-          </h1>
-          <p className="intro">
-            Developer in Vienna, Austria. Currently <span className="age">{age}</span>{" "}
-            years old. I build privacy-minded tools, AI-native products, and
-            calm software.
-          </p>
-          <div className="hero-links">
-            <a href="mailto:severin.hilbert@gmail.com">
-              <Mail className="size-4" />
-              severin.hilbert@gmail.com
-            </a>
-            <span>
-              <MapPin className="size-4" />
-              Vienna, Austria
-            </span>
-          </div>
-          <div className="social-row">
-            {socials.map((social) => {
-              const IconComponent = social.icon;
-              return (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  aria-label={social.label}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <IconComponent className="size-5" style={{ color: social.color }} />
-                </a>
-              );
-            })}
-          </div>
+          <TypingText as="h1" text={"Severin\nHilbert"} className="typed-heading" delay={220} />
+          <TypedIntroDescription age={age} delay={620} />
+          <TerminalOutput delay={1.68}>
+            <div className="hero-links">
+              <a href="mailto:severin.hilbert@gmail.com">
+                <Mail className="size-4" />
+                severin.hilbert@gmail.com
+              </a>
+              <span>
+                <MapPin className="size-4" />
+                Vienna, Austria
+              </span>
+            </div>
+          </TerminalOutput>
+          <TerminalOutput delay={1.82}>
+            <div className="social-row">
+              {socials.map((social) => {
+                const IconComponent = social.icon;
+                return (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    aria-label={social.label}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <IconComponent className="size-5" style={{ color: social.color }} />
+                  </a>
+                );
+              })}
+            </div>
+          </TerminalOutput>
         </motion.div>
       </div>
     </section>
@@ -622,26 +909,40 @@ function FeaturedProject() {
             </a>
             <h2>
               <a href="https://tnyr.me" target="_blank" rel="noreferrer">
-                tnyr.me
+                <DecryptedText text="tnyr.me" delay={120} interval={30} />
               </a>
             </h2>
           </div>
         </div>
-        <div className="prose-block">
-          <p className="project-summary">
-            Privacy-focused, open-source URL shortener with passwordless
-            zero-trust encryption for links and metadata.
-          </p>
-          <p>
-            The browser does the sensitive work. The server stores only a
-            storage key and encrypted destination data, so the original link
-            stays private by design.
-          </p>
+        <TerminalOutput className="prose-block" delay={0.42}>
+          <DecryptedText
+            as="p"
+            className="project-summary"
+            text="Privacy-focused, open-source URL shortener with passwordless zero-trust encryption for links and metadata."
+            delay={80}
+            interval={16}
+            revealStep={3}
+          />
+          <DecryptedText
+            as="p"
+            text="The browser does the sensitive work. The server stores only a storage key and encrypted destination data, so the original link stays private by design."
+            delay={240}
+            interval={14}
+            revealStep={4}
+          />
           <div className="inline-list">
-            <span>AES-256</span>
-            <span>no tracking</span>
-            <span>self-hostable</span>
-            <span>150+ GitHub stars</span>
+            <span>
+              <DecryptedText text="AES-256" delay={430} interval={24} revealStep={2} />
+            </span>
+            <span>
+              <DecryptedText text="no tracking" delay={480} interval={22} revealStep={2} />
+            </span>
+            <span>
+              <DecryptedText text="self-hostable" delay={530} interval={22} revealStep={2} />
+            </span>
+            <span>
+              <DecryptedText text="150+ GitHub stars" delay={580} interval={20} revealStep={3} />
+            </span>
           </div>
           <div className="link-row">
             <a href="https://tnyr.me" target="_blank" rel="noreferrer">
@@ -651,7 +952,7 @@ function FeaturedProject() {
               source <SiGithub className="size-4" />
             </a>
           </div>
-        </div>
+        </TerminalOutput>
       </div>
     </section>
   );
@@ -662,7 +963,7 @@ function StackSection() {
     <section id="stack" className="section">
       <div className="page section-stack">
         <ShellLine command="ls things-i-like" />
-        <h2>Things I like</h2>
+        <TypingText as="h2" text="Things I like" delay={160} />
         <div className="tool-list">
           {tools.map((tool, index) => {
             const IconComponent = tool.icon;
@@ -671,8 +972,8 @@ function StackSection() {
                 key={tool.name}
                 initial={{ opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.3, delay: index * 0.025 }}
+                viewport={{ once: true, margin: "0px 0px 18% 0px" }}
+                transition={{ duration: 0.22, delay: 0.44 + Math.min(index, 6) * 0.018 }}
                 className="tool-item"
               >
                 {tool.logo ? (
@@ -698,12 +999,10 @@ function MusicSection() {
       <div className="page section-stack">
         <div>
           <ShellLine command="cat music/currently.looping" />
-          <h2 className="music-title">
-            <span>Music I like</span>
-          </h2>
-          <p className="section-note">
-            Current rotation from the local playlist.
-          </p>
+          <TypingText as="h2" text="Music I like" className="music-title" delay={160} />
+          <TerminalOutput delay={0.42}>
+            <p className="section-note">Current rotation from the local playlist.</p>
+          </TerminalOutput>
         </div>
         <div className="music-grid">
           {musicTracks.map((track, index) => (
@@ -728,7 +1027,7 @@ function TimelineSection() {
         <ShellLine command="cat cv.timeline" />
         <div className="section-stack">
           <div>
-            <h2>Work, school, wins</h2>
+            <TypingText as="h2" text="Work, school, wins" delay={160} />
           </div>
           <div className="timeline">
             {timeline.map((item, index) => {
@@ -738,8 +1037,8 @@ function TimelineSection() {
                   key={`${item.role}-${item.date}`}
                   initial={{ opacity: 0, y: 18 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-80px" }}
-                  transition={{ duration: 0.4, delay: index * 0.04 }}
+                  viewport={{ once: true, margin: "0px 0px 18% 0px" }}
+                  transition={{ duration: 0.24, delay: 0.46 + Math.min(index, 5) * 0.022 }}
                   className="timeline-item"
                 >
                   <div className="timeline-meta">
@@ -771,20 +1070,24 @@ function StayveraSection() {
         <div>
           <ShellLine command="curl stayvera.com/about" />
           <h2 className="stayvera-heading">
-            Currently building{" "}
-            <a
+            <TypingText text="Currently building " delay={180} />
+            <motion.a
               href="https://stayvera.com"
               target="_blank"
               rel="noreferrer"
               aria-label="Visit Stayvera"
               className="stayvera-brand"
+              initial={{ opacity: 0, y: 6 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.2, delay: 0.5 }}
             >
               <img src="/brand/stayvera-symbol.webp" alt="" />
               <span>Stayvera</span>
-            </a>
+            </motion.a>
           </h2>
         </div>
-        <div className="prose-block">
+        <TerminalOutput className="prose-block" delay={0.58}>
           <p>
             Stayvera is a premium rental and group-travel platform focused on
             fair fees, trust, host support, instant listing import, and an AI
@@ -796,7 +1099,7 @@ function StayveraSection() {
             <span>AI guest ops</span>
             <span>transparent fees</span>
           </div>
-        </div>
+        </TerminalOutput>
       </div>
     </section>
   );
@@ -807,15 +1110,17 @@ function ContactSection() {
     <section className="section final-section">
       <div className="page">
         <ShellLine command="ssh severin@sevi.sh" />
-        <h2>Want to build something sharp?</h2>
-        <div className="link-row">
-          <a href="mailto:severin.hilbert@gmail.com">
-            send mail <Mail className="size-4" />
-          </a>
-          <a href="https://github.com/Sevi-py" target="_blank" rel="noreferrer">
-            GitHub <ArrowUpRight className="size-4" />
-          </a>
-        </div>
+        <TypingText as="h2" text="Want to build something sharp?" delay={180} />
+        <TerminalOutput delay={0.62}>
+          <div className="link-row">
+            <a href="mailto:severin.hilbert@gmail.com">
+              send mail <Mail className="size-4" />
+            </a>
+            <a href="https://github.com/Sevi-py" target="_blank" rel="noreferrer">
+              GitHub <ArrowUpRight className="size-4" />
+            </a>
+          </div>
+        </TerminalOutput>
       </div>
     </section>
   );
