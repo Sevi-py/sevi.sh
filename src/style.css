@@ -113,6 +113,11 @@ a {
   white-space: pre-line;
 }
 
+.typing-text:empty::before {
+  visibility: hidden;
+  content: "\00a0";
+}
+
 .typing-text.is-typing::after {
   display: inline-block;
   width: 0.48em;
@@ -375,6 +380,32 @@ h3 {
   border-top: 1px solid rgba(212, 212, 216, 0.14);
 }
 
+.music-expand {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.48rem;
+  margin-top: 0.7rem;
+  padding: 0;
+  color: #d4d4d8;
+  font: inherit;
+  font-size: 0.74rem;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  transition: color 160ms ease, opacity 160ms ease;
+}
+
+.music-expand:hover {
+  color: #fff;
+}
+
+.music-expand span {
+  display: inline-flex;
+  transform-origin: 50% 52%;
+}
+
 .music-track {
   position: relative;
   display: grid;
@@ -634,6 +665,10 @@ h3 {
   margin-top: 0.2rem;
   color: #d9f99d;
   font-size: 0.76rem;
+}
+
+.timeline-item h3 {
+  padding-right: 5rem;
 }
 
 .timeline-item p:not(.org) {

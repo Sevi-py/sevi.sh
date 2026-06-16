@@ -20,7 +20,14 @@ import {
   Play,
   Trophy,
 } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValueEvent,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+} from "motion/react";
 import WaveSurfer from "wavesurfer.js";
 import {
   Link,
@@ -31,7 +38,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import type { IconType } from "react-icons";
-import { FaLinkedinIn } from "react-icons/fa";
+import { FaLinkedinIn, FaTwitter } from "react-icons/fa";
 import {
   SiExpo,
   SiGithub,
@@ -39,7 +46,6 @@ import {
   SiPytorch,
   SiSelenium,
   SiTypescript,
-  SiX,
 } from "react-icons/si";
 import { DitherBackground } from "./DitherBackground";
 import { musicPeaks } from "./musicPeaks";
@@ -59,8 +65,8 @@ type MusicTrack = {
 };
 
 const socials = [
-  { label: "X", href: "https://x.com/evverin", icon: SiX, color: "#ffffff" },
   { label: "GitHub", href: "https://github.com/Sevi-py", icon: SiGithub, color: "#ffffff" },
+  { label: "Twitter", href: "https://x.com/evverin", icon: FaTwitter, color: "#1da1f2" },
   {
     label: "LinkedIn",
     href: "https://www.linkedin.com/in/severin-hilbert/",
@@ -82,7 +88,7 @@ const tools: Array<Tool> = [
   { name: "Codex", logo: "/brand/codex.svg" },
 ];
 
-const musicTracks: Array<MusicTrack> = [
+const musicTrackLibrary: Array<MusicTrack> = [
   {
     id: "camilla-yung-saint-paul",
     title: "Camilla",
@@ -245,6 +251,36 @@ const musicTracks: Array<MusicTrack> = [
   },
 ];
 
+const musicTrackOrder = [
+  "sulk-tr-st",
+  "don-t-stop-dj-heartstring",
+  "key-to-my-heart-bovski",
+  "everytime-idemi",
+  "vanished-crystal-castles",
+  "genesis-grimes",
+  "samurai-schwert-yung-hurn",
+  "europatraume-brutalismus-3000",
+  "ten-fred-again",
+  "vhs-01099",
+  "pushe-packs-kev-koko",
+  "shabab-e-s-im-vip-pashanim",
+  "get-buck-lugatti",
+  "camilla-yung-saint-paul",
+  "sundress-a-ap-rocky",
+  "ufo361-match-3",
+];
+
+const musicTracksById = new Map(musicTrackLibrary.map((track) => [track.id, track]));
+const musicTracks = musicTrackOrder.map((id) => {
+  const track = musicTracksById.get(id);
+
+  if (!track) {
+    throw new Error(`Missing music track: ${id}`);
+  }
+
+  return track;
+});
+
 const timeline = [
   {
     icon: BriefcaseBusiness,
@@ -354,6 +390,7 @@ function TypingText({
   delay = 0,
   speed = 22,
   start,
+  adaptive = false,
 }: {
   text: string;
   as?: ElementType;
@@ -361,6 +398,7 @@ function TypingText({
   delay?: number;
   speed?: number;
   start?: boolean;
+  adaptive?: boolean;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const [ownRef, ownStart] = useStartOnView<HTMLElement>();
@@ -378,6 +416,45 @@ function TypingText({
     }
 
     setVisibleCharacters(0);
+
+    if (adaptive) {
+      let frame: number;
+      let previousTime = performance.now();
+      let previousScrollY = window.scrollY;
+      let scrollVelocity = 0;
+      let typedCharacters = 0;
+
+      const tick = (time: number) => {
+        const delta = Math.max(1, time - previousTime);
+        const scrollY = window.scrollY;
+        const instantVelocity = Math.abs(scrollY - previousScrollY) / delta;
+        const element = ownRef.current;
+        const rect = element?.getBoundingClientRect();
+        const behindViewportLine = rect
+          ? Math.max(0, window.innerHeight * 0.55 - rect.top)
+          : 0;
+
+        scrollVelocity = scrollVelocity * 0.72 + instantVelocity * 0.28;
+        typedCharacters +=
+          (delta / speed) *
+          Math.min(3.2, 1 + scrollVelocity * 0.55 + behindViewportLine / 320);
+
+        const nextCharacter = Math.min(text.length, Math.floor(typedCharacters));
+        setVisibleCharacters(nextCharacter);
+
+        previousTime = time;
+        previousScrollY = scrollY;
+
+        if (nextCharacter < text.length) {
+          frame = window.requestAnimationFrame(tick);
+        }
+      };
+
+      frame = window.requestAnimationFrame(tick);
+
+      return () => window.cancelAnimationFrame(frame);
+    }
+
     let typeTimer: number | undefined;
     const startTimer = window.setTimeout(() => {
       let nextCharacter = 0;
@@ -397,7 +474,7 @@ function TypingText({
         window.clearInterval(typeTimer);
       }
     };
-  }, [delay, isStarted, shouldReduceMotion, speed, text]);
+  }, [adaptive, delay, isStarted, ownRef, shouldReduceMotion, speed, text]);
 
   return createElement(
     Component,
@@ -409,6 +486,55 @@ function TypingText({
       "aria-label": text,
     },
     text.slice(0, visibleCharacters),
+  );
+}
+
+function ScrollResponsiveArticle({
+  children,
+  className,
+}: {
+  children: ReactNode | ((isVisible: boolean) => ReactNode);
+  className?: string;
+}) {
+  const ref = useRef<HTMLElement | null>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const [hasEntered, setHasEntered] = useState(false);
+  const [hasSettled, setHasSettled] = useState(false);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start 94%", "start 54%"],
+  });
+  const opacity = useTransform(scrollYProgress, [0, 0.86], [0, 1]);
+  const y = useTransform(scrollYProgress, [0, 1], [26, 0]);
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    if (latest > 0) {
+      setHasEntered(true);
+    }
+
+    if (latest >= 1) {
+      setHasSettled(true);
+    }
+  });
+  const renderedChildren =
+    typeof children === "function" ? children(shouldReduceMotion || hasEntered) : children;
+
+  if (shouldReduceMotion) {
+    return <article className={className}>{renderedChildren}</article>;
+  }
+
+  return (
+    <motion.article
+      ref={ref}
+      layout="position"
+      className={className}
+      style={hasSettled ? undefined : { opacity, y }}
+      animate={hasSettled ? { opacity: 1, y: 0 } : undefined}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.16, ease: "easeOut" }}
+    >
+      {renderedChildren}
+    </motion.article>
   );
 }
 
@@ -770,12 +896,8 @@ function MusicTrackRow({
   };
 
   return (
-    <motion.article
+    <ScrollResponsiveArticle
       className={`music-track${isActive ? " is-active" : ""}`}
-      initial={{ opacity: 0, y: 14 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px 18% 0px" }}
-      transition={{ duration: 0.22, delay: 0.52 + Math.min(index, 5) * 0.018 }}
     >
       <div className="music-row-command">
         <span className="music-index">{String(index + 1).padStart(2, "0")}</span>
@@ -834,7 +956,7 @@ function MusicTrackRow({
           </div>
         </div>
       </div>
-    </motion.article>
+    </ScrollResponsiveArticle>
   );
 }
 
@@ -909,39 +1031,39 @@ function FeaturedProject() {
             </a>
             <h2>
               <a href="https://tnyr.me" target="_blank" rel="noreferrer">
-                <DecryptedText text="tnyr.me" delay={120} interval={30} />
+                <DecryptedText text="tnyr.me" delay={180} interval={82} />
               </a>
             </h2>
           </div>
         </div>
-        <TerminalOutput className="prose-block" delay={0.42}>
+        <TerminalOutput className="prose-block">
           <DecryptedText
             as="p"
             className="project-summary"
             text="Privacy-focused, open-source URL shortener with passwordless zero-trust encryption for links and metadata."
-            delay={80}
-            interval={16}
-            revealStep={3}
+            delay={140}
+            interval={30}
+            revealStep={2}
           />
           <DecryptedText
             as="p"
             text="The browser does the sensitive work. The server stores only a storage key and encrypted destination data, so the original link stays private by design."
-            delay={240}
-            interval={14}
-            revealStep={4}
+            delay={360}
+            interval={28}
+            revealStep={2}
           />
           <div className="inline-list">
             <span>
-              <DecryptedText text="AES-256" delay={430} interval={24} revealStep={2} />
+              <DecryptedText text="AES-256" delay={760} interval={40} revealStep={1} />
             </span>
             <span>
-              <DecryptedText text="no tracking" delay={480} interval={22} revealStep={2} />
+              <DecryptedText text="no tracking" delay={840} interval={38} revealStep={1} />
             </span>
             <span>
-              <DecryptedText text="self-hostable" delay={530} interval={22} revealStep={2} />
+              <DecryptedText text="self-hostable" delay={920} interval={38} revealStep={1} />
             </span>
             <span>
-              <DecryptedText text="150+ GitHub stars" delay={580} interval={20} revealStep={3} />
+              <DecryptedText text="150+ GitHub stars" delay={1000} interval={36} revealStep={1} />
             </span>
           </div>
           <div className="link-row">
@@ -993,28 +1115,66 @@ function StackSection() {
 
 function MusicSection() {
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const visibleTracks = isExpanded ? musicTracks : musicTracks.slice(0, 4);
+
+  useEffect(() => {
+    if (!isExpanded && activeTrackId) {
+      const activeTrackIndex = musicTracks.findIndex((track) => track.id === activeTrackId);
+
+      if (activeTrackIndex >= 4) {
+        setActiveTrackId(null);
+      }
+    }
+  }, [activeTrackId, isExpanded]);
 
   return (
     <section id="music" className="section music-section">
       <div className="page section-stack">
         <div>
           <ShellLine command="cat music/currently.looping" />
-          <TypingText as="h2" text="Music I like" className="music-title" delay={160} />
-          <TerminalOutput delay={0.42}>
-            <p className="section-note">Current rotation from the local playlist.</p>
+          <TypingText as="h2" text="Music I like" className="music-title" adaptive />
+          <TerminalOutput>
+            <TypingText
+              as="p"
+              className="section-note"
+              text="Current rotation from the local playlist."
+              adaptive
+              speed={14}
+            />
           </TerminalOutput>
         </div>
-        <div className="music-grid">
-          {musicTracks.map((track, index) => (
-            <MusicTrackRow
-              key={track.id}
-              track={track}
-              index={index}
-              activeTrackId={activeTrackId}
-              setActiveTrackId={setActiveTrackId}
-            />
-          ))}
-        </div>
+        <motion.div className="music-grid" layout>
+          <AnimatePresence initial={false}>
+            {visibleTracks.map((track, index) => (
+              <MusicTrackRow
+                key={track.id}
+                track={track}
+                index={index}
+                activeTrackId={activeTrackId}
+                setActiveTrackId={setActiveTrackId}
+              />
+            ))}
+          </AnimatePresence>
+        </motion.div>
+        <motion.button
+          type="button"
+          className="music-expand"
+          onClick={() => setIsExpanded((current) => !current)}
+          aria-expanded={isExpanded}
+          whileHover={{ y: -1 }}
+          whileTap={{ y: 0 }}
+          transition={{ duration: 0.16 }}
+        >
+          <motion.span
+            className="terminal-arrow"
+            animate={{ rotate: isExpanded ? 90 : 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            &gt;
+          </motion.span>
+          {isExpanded ? "show less" : `show all ${musicTracks.length}`}
+        </motion.button>
       </div>
     </section>
   );
@@ -1027,33 +1187,37 @@ function TimelineSection() {
         <ShellLine command="cat cv.timeline" />
         <div className="section-stack">
           <div>
-            <TypingText as="h2" text="Work, school, wins" delay={160} />
+            <TypingText as="h2" text="Work, school, wins" adaptive />
           </div>
           <div className="timeline">
-            {timeline.map((item, index) => {
+            {timeline.map((item) => {
               const IconComponent = item.icon;
               return (
-                <motion.article
-                  key={`${item.role}-${item.date}`}
-                  initial={{ opacity: 0, y: 18 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "0px 0px 18% 0px" }}
-                  transition={{ duration: 0.24, delay: 0.46 + Math.min(index, 5) * 0.022 }}
-                  className="timeline-item"
-                >
-                  <div className="timeline-meta">
-                    <span className="timeline-date">
-                      <IconComponent className="size-4" />
-                      {item.date}
-                    </span>
-                    <span className="timeline-logo">
-                      <img src={item.logo} alt={`${item.org} logo`} />
-                    </span>
-                  </div>
-                  <h3>{item.role}</h3>
-                  <p className="org">{item.org}</p>
-                  <p>{item.text}</p>
-                </motion.article>
+                <ScrollResponsiveArticle key={`${item.role}-${item.date}`} className="timeline-item">
+                  {(isVisible) => (
+                    <>
+                      <div className="timeline-meta">
+                        <span className="timeline-date">
+                          <IconComponent className="size-4" />
+                          {item.date}
+                        </span>
+                        <span className="timeline-logo">
+                          <img src={item.logo} alt={`${item.org} logo`} />
+                        </span>
+                      </div>
+                      <TypingText as="h3" text={item.role} adaptive speed={24} start={isVisible} />
+                      <TypingText
+                        as="p"
+                        className="org"
+                        text={item.org}
+                        adaptive
+                        speed={24}
+                        start={isVisible}
+                      />
+                      <TypingText as="p" text={item.text} adaptive speed={15} start={isVisible} />
+                    </>
+                  )}
+                </ScrollResponsiveArticle>
               );
             })}
           </div>
@@ -1064,8 +1228,10 @@ function TimelineSection() {
 }
 
 function StayveraSection() {
+  const [sectionRef, sectionStarted] = useStartOnView<HTMLElement>("0px 0px 4% 0px");
+
   return (
-    <section className="section">
+    <section className="section" ref={sectionRef}>
       <div className="page section-stack">
         <div>
           <ShellLine command="curl stayvera.com/about" />
@@ -1087,17 +1253,43 @@ function StayveraSection() {
             </motion.a>
           </h2>
         </div>
-        <TerminalOutput className="prose-block" delay={0.58}>
-          <p>
-            Stayvera is a premium rental and group-travel platform focused on
-            fair fees, trust, host support, instant listing import, and an AI
-            copilot for guest communication and operations.
-          </p>
+        <TerminalOutput className="prose-block">
+          <TypingText
+            as="p"
+            text="Stayvera is a premium rental and group-travel platform focused on fair fees, trust, host support, instant listing import, and an AI copilot for guest communication and operations."
+            delay={140}
+            speed={14}
+            start={sectionStarted}
+          />
           <div className="inline-list">
-            <span>fair host economics</span>
-            <span>group travel</span>
-            <span>AI guest ops</span>
-            <span>transparent fees</span>
+            <TypingText
+              as="span"
+              text="fair host economics"
+              delay={1320}
+              speed={22}
+              start={sectionStarted}
+            />
+            <TypingText
+              as="span"
+              text="group travel"
+              delay={1480}
+              speed={22}
+              start={sectionStarted}
+            />
+            <TypingText
+              as="span"
+              text="AI guest ops"
+              delay={1600}
+              speed={22}
+              start={sectionStarted}
+            />
+            <TypingText
+              as="span"
+              text="transparent fees"
+              delay={1720}
+              speed={22}
+              start={sectionStarted}
+            />
           </div>
         </TerminalOutput>
       </div>
@@ -1110,7 +1302,7 @@ function ContactSection() {
     <section className="section final-section">
       <div className="page">
         <ShellLine command="ssh severin@sevi.sh" />
-        <TypingText as="h2" text="Want to build something sharp?" delay={180} />
+        <TypingText as="h2" text="Want to build something?" delay={180} />
         <TerminalOutput delay={0.62}>
           <div className="link-row">
             <a href="mailto:severin.hilbert@gmail.com">
