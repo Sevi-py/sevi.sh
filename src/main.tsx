@@ -827,9 +827,9 @@ function Home() {
       <IntroSection />
       <StayveraSection />
       <StackSection />
-      <MusicSection />
       <TimelineSection />
       <FeaturedProject />
+      <MusicSection />
       <ContactSection />
       <BottomLegalLinks />
     </main>
