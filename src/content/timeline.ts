@@ -20,6 +20,14 @@ export const timeline: Array<TimelineItem> = [
     text: "Building the product side of an AI-native booking platform for modern group travel: host onboarding, guest flows, property intelligence, and the small details that make trips feel effortless.",
   },
   {
+    icon: Trophy,
+    logo: "/brand/cloudflight-coding-contest.webp",
+    date: "Nov 2025",
+    role: "1st place, Cloudflight Coding Contest Vienna",
+    org: "41st Classic CCC",
+    text: "Won the Vienna site, placed 5th globally among more than 2400 participants, and built custom LLM agents to support contest solutions.",
+  },
+  {
     icon: BriefcaseBusiness,
     logo: "/brand/cloudflight.webp",
     date: "Jul 2025",
@@ -36,14 +44,6 @@ export const timeline: Array<TimelineItem> = [
     text: "Worked on a customer-facing logistics service portal with Angular and Java/Spring, and wrote end-to-end Cypress tests in TypeScript. Youngest intern at Cloudflight, and the only intern not coming from university or a specialized technical school.",
   },
   {
-    icon: Trophy,
-    logo: "/brand/cloudflight-coding-contest.webp",
-    date: "Nov 2025",
-    role: "1st place, Cloudflight Coding Contest Vienna",
-    org: "41st Classic CCC",
-    text: "Won the Vienna site, placed 5th globally among more than 2400 participants, and built custom LLM agents to support contest solutions.",
-  },
-  {
     icon: GraduationCap,
     logo: "/brand/keimgasse.webp",
     date: "2018 - 2026",
@@ -52,4 +52,3 @@ export const timeline: Array<TimelineItem> = [
     text: "Completed the Austrian Matura with an average grade of 1.4 (1 is the best in Austria)",
   },
 ];
-
