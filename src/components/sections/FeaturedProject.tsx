@@ -1,5 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
-import { SiGithub } from "react-icons/si";
+import { SiApple, SiGithub } from "react-icons/si";
 import { DecryptedText } from "../text/DecryptedText";
 import { ShellLine } from "../text/ShellLine";
 import { TerminalOutput } from "../text/TerminalOutput";
@@ -49,7 +49,14 @@ const projects = [
     detail:
       "Pick a day, add a time and optional notes, then choose a notification or an alarm with sound and snooze. Reminders stay on the device, and no account is required.",
     tags: ["iOS", "calendar reminders", "alarms", "on-device"],
-    links: [{ label: "visit", href: "https://duechime.flarely.at/", icon: "external" }],
+    links: [
+      { label: "visit", href: "https://duechime.flarely.at/", icon: "external" },
+      {
+        label: "download",
+        href: "https://apps.apple.com/app/id6762373291",
+        icon: "apple",
+      },
+    ],
     animation: "typing",
   },
 ];
@@ -185,6 +192,8 @@ export function FeaturedProject() {
                         {link.label}
                         {link.icon === "github" ? (
                           <SiGithub className="size-4" />
+                        ) : link.icon === "apple" ? (
+                          <SiApple className="size-3" />
                         ) : (
                           <ArrowUpRight className="size-4" />
                         )}
