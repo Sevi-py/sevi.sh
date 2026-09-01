@@ -38,6 +38,20 @@ const projects = [
     ],
     animation: "decrypt",
   },
+  {
+    label: "iOS app",
+    name: "DueChime",
+    href: "https://duechime.flarely.at/",
+    logo: "/brand/duechime.webp",
+    logoAlt: "DueChime app icon",
+    summary:
+      "A calendar-based reminder app for iPhone that keeps reminders alongside their dates and can use alarm-style alerts.",
+    detail:
+      "Pick a day, add a time and optional notes, then choose a notification or an alarm with sound and snooze. Reminders stay on the device, and no account is required.",
+    tags: ["iOS", "calendar reminders", "alarms", "on-device"],
+    links: [{ label: "visit", href: "https://duechime.flarely.at/", icon: "external" }],
+    animation: "typing",
+  },
 ];
 
 function ProjectText({
