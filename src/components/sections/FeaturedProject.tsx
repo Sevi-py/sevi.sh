@@ -7,6 +7,27 @@ import { TypingText } from "../text/TypingText";
 
 const projects = [
   {
+    label: "macOS app",
+    name: "Hangtime",
+    href: "https://github.com/Sevi-py/hangtime",
+    logo: "/brand/hangtime.webp",
+    logoAlt: "Hangtime app icon",
+    summary:
+      "A macOS menu bar app that shows how much of your Claude Code, Codex, Grok CLI and Antigravity limits you have left.",
+    detail:
+      "Every limit the CLIs report, with reset times and an even-pace marker, plus desktop widgets, a cost and token dashboard, and notifications when limits reset or run low.",
+    tags: ["macOS", "Swift", "menu bar", "widgets", "open source"],
+    links: [
+      {
+        label: "download",
+        href: "https://github.com/Sevi-py/hangtime/releases/latest",
+        icon: "apple",
+      },
+      { label: "source", href: "https://github.com/Sevi-py/hangtime", icon: "github" },
+    ],
+    animation: "decrypt",
+  },
+  {
     label: "SaaS product",
     name: "Flarely",
     href: "https://flarely.at",
