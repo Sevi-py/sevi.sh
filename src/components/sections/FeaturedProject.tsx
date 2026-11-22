@@ -25,7 +25,7 @@ const projects = [
       },
       { label: "source", href: "https://github.com/Sevi-py/hangtime", icon: "github" },
     ],
-    animation: "decrypt",
+    animation: "typing",
   },
   {
     label: "SaaS product",
